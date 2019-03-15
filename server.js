@@ -33,18 +33,19 @@ app.route('/')
     res.render(process.cwd() + '/views/pug/index.pug', {
       title: 'Hello',
       message: 'Please login',
+      showLogin: true,
     });
   });
 
 mongo.connect(process.env.DATABASE, {
   useNewUrlParser: true,
-  dbName: 'advancednode',
-}, (err, db) => {
+}, (err, client) => {
   if (err) {
     console.log("Database error: ", err);
   } else {
     console.log("Successful database connection")
-    db.close();
+    const db = client.db('advancednode');
+    console.log(client);
     
     passport.serializeUser((user, done) => {
       done(null, user._id);
@@ -59,7 +60,7 @@ mongo.connect(process.env.DATABASE, {
     });
     
     passport.use(new LocalStrategy(
-      (username) => (password) => (done) => {
+      (username, password, done) => {
         db.collection('users').findOne({username: username}, (err, user) => {
           console.log(`User ${username} attempted to login`);
           if (err)  { return done(err); }
@@ -69,10 +70,23 @@ mongo.connect(process.env.DATABASE, {
         })
       }
     ));
+    
+    
+    app.post('/login', passport.authenticate('local', {
+      failureRedirect: '/'
+    }),(req, res) => {
+      res.redirect('/profile')
+    })
+    
+    app.get('/profile', (res, req) => {
+      res.render(process.cwd() + '/views/pug/profile.pug');
+    });
+
 
     app.listen(process.env.PORT || 3000, () => {
       console.log("Listening on port " + process.env.PORT);
     });
+    
 
   }
 });
