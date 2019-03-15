@@ -5,6 +5,7 @@ const bodyParser  = require('body-parser');
 const fccTesting  = require('./freeCodeCamp/fcctesting.js');
 const session     = require('express-session');
 const passport    = require('passport');
+const ObjectID    = require('mongodb').ObjectID;
 
 const app = express();
 
@@ -15,12 +16,25 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: true,
-  saveUnitialized: true,
+  saveUninitialized: true,
 }));
 app.use(passport.initialize());
 app.use(passport.session());
 
 app.set('view engine', 'pug');
+
+passport.serializeUser((user, done) => {
+  done(null, user._id);
+});
+
+passport.deserializeUser((id, done) => {
+  // db.collection('users').findById({
+  //   _id: new ObjectID(id)
+  // }, (err, foundUser) => {
+  //   done(null, foundUser);
+  done(null, null);
+  });
+// });
 
 app.route('/')
   .get((req, res) => {
