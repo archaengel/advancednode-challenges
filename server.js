@@ -91,6 +91,14 @@ mongo.connect(process.env.DATABASE, {
       });
     });
     
+    app.get('/logout', (req, res) => {
+      req.logout();
+      res.redirect('/');
+    });
+    
+    app.use((req, res, next) => {
+      res.status(404).type('text').send('Not Found');
+    });
 
     app.listen(process.env.PORT || 3000, () => {
       console.log("Listening on port " + process.env.PORT);
