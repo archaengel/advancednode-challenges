@@ -45,10 +45,28 @@ mongo.connect(process.env.DATABASE, {
       callbackURL: 'https://archaengel-advancednode-challenges.glitch.me/auth/github/callback',
     }, function(accessToken, refreshToken, profile, cb) {
       console.log(profile);
+      db.collection('socialusers').findAndModify(
+        {id: profile.id},
+        {},
+        { $setOnInsert: {
+          id: profile.id,
+          name: profile.displayName || 'John Doe',
+          photo: profile.photos[0].value || '',
+          email: profile.emails[0].value || 'No public email',
+          created_on: new Date(),
+          provider: profile.provider || '',
+        }, $set: {
+          last_login: new Date(),
+        }, $inc: {
+          login_count: 1,
+        }},
+        { upsert: true, new: true },
+        (err, authedUser) => {
+           return cb(null, authedUser.value);
+        }
+      );
     }));
     
-
-
     app.listen(process.env.PORT || 3000, () => {
       console.log("Listening on port " + process.env.PORT);
     });
