@@ -34,6 +34,7 @@ app.route('/')
       title: 'Home page',
       message: 'Please login',
       showLogin: true,
+      showRegistration: true,
     });
   });
 
@@ -51,7 +52,7 @@ mongo.connect(process.env.DATABASE, {
     });
     
     passport.deserializeUser((id, done) => {
-      db.collection('users').findById({
+      db.collection('users').findOne({
         _id: new ObjectID(id)
       }, (err, foundUser) => {
         done(null, foundUser);
@@ -94,6 +95,31 @@ mongo.connect(process.env.DATABASE, {
     app.get('/logout', (req, res) => {
       req.logout();
       res.redirect('/');
+    });
+    
+    app.route('/register').post((req, res, next) => {
+      db.collection('users').findOne({
+        username: req.body.username
+      }, (err, foundUser) => {
+        if (err) {
+          next(err);
+        } else if (!!foundUser) {
+          res.redirect('/');
+        } else {
+          db.collection('users').insertOne({
+            username: req.body.username,
+            password: req.body.password,
+          }, (err, insertedUser) => {
+            if (err) {
+              res.redirect('/');
+            } else {
+              next(null, insertedUser);
+            }
+          });
+        }
+      })
+    }, passport.authenticate('local', { failureRedirect: '/' }), (req, res, next) => {
+      res.redirect('/profile');
     });
     
     app.use((req, res, next) => {
