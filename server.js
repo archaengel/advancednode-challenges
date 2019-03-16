@@ -1,14 +1,14 @@
 'use strict';
 
-const express        = require('express');
-const bodyParser     = require('body-parser');
-const fccTesting     = require('./freeCodeCamp/fcctesting.js');
-const session        = require('express-session');
-const passport       = require('passport');
-const bcrypt         = require('bcrypt');
-const LocalStrategy  = require('passport-local');
-const ObjectID       = require('mongodb').ObjectID;
-const mongo          = require('mongodb').MongoClient;
+const routes        = require('./routes.js');
+const auth          = require('./auth.js');
+
+const express       = require('express');
+const bodyParser    = require('body-parser');
+const fccTesting    = require('./freeCodeCamp/fcctesting.js');
+const session       = require('express-session');
+const passport      = require('passport');
+const mongo         = require('mongodb').MongoClient;
 
 const app = express();
 
@@ -26,19 +26,6 @@ app.use(passport.session());
 
 app.set('view engine', 'pug');
 
-
-
-
-app.route('/')
-  .get((req, res) => {
-    res.render(process.cwd() + '/views/pug/index.pug', {
-      title: 'Home page',
-      message: 'Please login',
-      showLogin: true,
-      showRegistration: true,
-    });
-  });
-
 mongo.connect(process.env.DATABASE, {
   useNewUrlParser: true,
 }, (err, client) => {
@@ -48,90 +35,11 @@ mongo.connect(process.env.DATABASE, {
     console.log("Successful database connection")
     const db = client.db('advancednode');
     
-    passport.serializeUser((user, done) => {
-      done(null, user._id);
-    });
-    
-    passport.deserializeUser((id, done) => {
-      db.collection('users').findOne({
-        _id: new ObjectID(id)
-      }, (err, foundUser) => {
-        done(null, foundUser);
-      });
-    });
-    
-    passport.use(new LocalStrategy(
-      (username, password, done) => {
-        db.collection('users').findOne({username: username}, (err, user) => {
-          console.log(`User ${username} attempted to login`);
-          if (err)  { return done(err); }
-          if (!user) { return done(null, false); }
-          if (!bcrypt.compareSync(password, user.password)) {return done(null, false); }
-          return done(null, user);
-        })
-      }
-    ));
-
-
-    app.post('/login', passport.authenticate('local', {
-      failureRedirect: '/'
-    }),(req, res) => {
-      res.redirect('/profile')
-    });
-
-        
-    function ensureAuthenticated(req, res, next) {
-      if (req.isAuthenticated()) {
-        return next();
-      }
-      res.redirect('/');
-    };
-    
-    app.get('/profile', ensureAuthenticated, (req, res) => {
-      res.render(process.cwd() + '/views/pug/profile.pug', {
-        username: req.user.username,
-      });
-    });
-    
-    app.get('/logout', (req, res) => {
-      req.logout();
-      res.redirect('/');
-    });
-    
-    app.route('/register').post((req, res, next) => {
-      let hash = bcrypt.hashSync(req.body.password, 12);
-      db.collection('users').findOne({
-        username: req.body.username
-      }, (err, foundUser) => {
-        if (err) {
-          next(err);
-        } else if (!!foundUser) {
-          res.redirect('/');
-        } else {
-          db.collection('users').insertOne({
-            username: req.body.username,
-            password: hash,
-          }, (err, insertedUser) => {
-            if (err) {
-              res.redirect('/');
-            } else {
-              next(null, insertedUser);
-            }
-          });
-        }
-      })
-    }, passport.authenticate('local', { failureRedirect: '/' }), (req, res, next) => {
-      res.redirect('/profile');
-    });
-    
-    app.use((req, res, next) => {
-      res.status(404).type('text').send('Not Found');
-    });
+    auth(app, db);
+    routes(app, db);
 
     app.listen(process.env.PORT || 3000, () => {
       console.log("Listening on port " + process.env.PORT);
     });
-    
-
   }
 });
