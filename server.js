@@ -5,6 +5,7 @@ const bodyParser     = require('body-parser');
 const fccTesting     = require('./freeCodeCamp/fcctesting.js');
 const session        = require('express-session');
 const passport       = require('passport');
+const bcrypt         = require('bcrypt');
 const LocalStrategy  = require('passport-local');
 const ObjectID       = require('mongodb').ObjectID;
 const mongo          = require('mongodb').MongoClient;
@@ -65,7 +66,7 @@ mongo.connect(process.env.DATABASE, {
           console.log(`User ${username} attempted to login`);
           if (err)  { return done(err); }
           if (!user) { return done(null, false); }
-          if (password !== user.password) {return done(null, false); }
+          if (!bcrypt.compareSync(password, user.password)) {return done(null, false); }
           return done(null, user);
         })
       }
@@ -98,6 +99,7 @@ mongo.connect(process.env.DATABASE, {
     });
     
     app.route('/register').post((req, res, next) => {
+      let hash = bcrypt.hashSync(req.body.password, 12);
       db.collection('users').findOne({
         username: req.body.username
       }, (err, foundUser) => {
@@ -108,7 +110,7 @@ mongo.connect(process.env.DATABASE, {
         } else {
           db.collection('users').insertOne({
             username: req.body.username,
-            password: req.body.password,
+            password: hash,
           }, (err, insertedUser) => {
             if (err) {
               res.redirect('/');
