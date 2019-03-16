@@ -8,6 +8,7 @@ const bodyParser    = require('body-parser');
 const fccTesting    = require('./freeCodeCamp/fcctesting.js');
 const session       = require('express-session');
 const passport      = require('passport');
+const GitHubStrategy  = require('passport-github').Strategy;
 const mongo         = require('mongodb').MongoClient;
 
 const app = express();
@@ -38,14 +39,14 @@ mongo.connect(process.env.DATABASE, {
     auth(app, db);
     routes(app, db);
     
-      
-    app.route('/auth/github')
-      .get(passport.authenticate('github'));
-
-    app.route('/auth/github/callback')
-      .get(passport.authenticate('github', { failureRedirect: '/',}), (req, res) => {
-      res.redirect('/profile');
-    });
+    passport.use(new GitHubStrategy ({
+      clientID: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      callbackURL: 'https://archaengel-advancednode-challenges.glitch.me/auth/github/callback',
+    }, function(accessToken, refreshToken, profile, cb) {
+      console.log(profile);
+    }));
+    
 
 
     app.listen(process.env.PORT || 3000, () => {
