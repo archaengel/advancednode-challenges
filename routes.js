@@ -28,7 +28,7 @@ module.exports = function (app, db) {
 
   app.get('/profile', ensureAuthenticated, (req, res) => {
     res.render(process.cwd() + '/views/pug/profile.pug', {
-      username: req.user.username,
+      username: req.user.username || req.user.name,
     });
   });
 
